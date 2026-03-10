@@ -8,8 +8,12 @@ export async function middleware(request: NextRequest) {
         },
     })
 
+    const isStaticAsset = request.nextUrl.pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/)
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.error('CRITICAL: MISSING SUPABASE CREDENTIALS in Environment Variables.')
+        if (!isStaticAsset) {
+            console.error('CRITICAL: MISSING SUPABASE CREDENTIALS in Environment Variables.')
+        }
         return response
     }
 
