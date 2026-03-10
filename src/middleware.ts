@@ -9,7 +9,8 @@ export async function middleware(request: NextRequest) {
     })
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        throw new Error('MISSING SUPABASE CREDENTIALS: Please create a .env.local file with NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+        console.error('CRITICAL: MISSING SUPABASE CREDENTIALS in Environment Variables.')
+        return response
     }
 
     const supabase = createServerClient(
