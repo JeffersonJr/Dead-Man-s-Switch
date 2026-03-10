@@ -9,10 +9,11 @@ export async function middleware(request: NextRequest) {
     })
 
     const isStaticAsset = request.nextUrl.pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/)
+    const isRelevantPath = request.nextUrl.pathname === '/' || request.nextUrl.pathname.startsWith('/dashboard') || request.nextUrl.pathname.startsWith('/login')
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        if (!isStaticAsset) {
-            console.error('CRITICAL: MISSING SUPABASE CREDENTIALS in Environment Variables.')
+        if (!isStaticAsset && isRelevantPath) {
+            console.error('CRITICAL: MISSING SUPABASE CREDENTIALS in Environment Variables. Please set them in Vercel Dashboard.')
         }
         return response
     }
