@@ -17,6 +17,7 @@ export default function SettingsPage() {
     const [targets, setTargets] = useState<any[]>([])
     const [profile, setProfile] = useState<any>(null)
     const [profileData, setProfileData] = useState({ full_name: '', email: '', phone: '' })
+    const [testLoading, setTestLoading] = useState<{[key: string]: boolean}>({})
     
     // Security states
     const [passwordData, setPasswordData] = useState({ new: '', confirm: '' })
@@ -166,6 +167,28 @@ export default function SettingsPage() {
 
         if (!error && data) {
             setTargets([...targets, data])
+        }
+    }
+
+    const handleTestEmail = async (email: string, targetId: string) => {
+        if (!email || !email.includes('@')) {
+            alert('Please enter a valid email address first.')
+            return
+        }
+        setTestLoading(prev => ({ ...prev, [targetId]: true }))
+        try {
+            const res = await fetch('/api/test-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            })
+            const data = await res.json()
+            if (data.error) throw new Error(data.error)
+            alert('Test email sent successfully! Please check your inbox.')
+        } catch (err: any) {
+            alert('Failed to send test email: ' + err.message)
+        } finally {
+            setTestLoading(prev => ({ ...prev, [targetId]: false }))
         }
     }
 
@@ -466,12 +489,23 @@ export default function SettingsPage() {
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[8px] opacity-40 uppercase">Destination</label>
-                                            <input
-                                                type="text"
-                                                value={target.destination_value || ''}
-                                                onChange={(e) => handleUpdateTarget(target.id, 'destination_value', e.target.value)}
-                                                className="w-full bg-black border-b border-[#00ff41]/30 p-2 text-sm focus:border-[#00ff41] focus:outline-none font-mono"
-                                            />
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={target.destination_value || ''}
+                                                    onChange={(e) => handleUpdateTarget(target.id, 'destination_value', e.target.value)}
+                                                    className="w-full bg-black border-b border-[#00ff41]/30 p-2 text-sm focus:border-[#00ff41] focus:outline-none font-mono"
+                                                />
+                                                {target.type === 'email' && (
+                                                    <button 
+                                                        onClick={() => handleTestEmail(target.destination_value, target.id)}
+                                                        disabled={testLoading[target.id]}
+                                                        className="px-3 border border-[#00ff41] text-[10px] text-[#00ff41] hover:bg-[#00ff41] hover:text-black transition-colors whitespace-nowrap"
+                                                    >
+                                                        {testLoading[target.id] ? 'SENDING...' : 'VALIDATE'}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-4 pt-4">
                                             <label className="flex items-center gap-2 cursor-pointer group">
