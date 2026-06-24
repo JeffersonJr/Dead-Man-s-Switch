@@ -4,15 +4,19 @@ import { Resend } from 'resend'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-    const resend = new Resend(process.env.RESEND_API_KEY)
     try {
+        if (!process.env.RESEND_API_KEY) {
+            return NextResponse.json({ error: 'RESEND_API_KEY is not configured on the server.' }, { status: 500 })
+        }
+        
+        const resend = new Resend(process.env.RESEND_API_KEY)
         const { email } = await request.json()
 
         if (!email || !email.includes('@')) {
             return NextResponse.json({ error: 'Valid email is required' }, { status: 400 })
         }
 
-        const data = await resend.emails.send({
+        const { data, error } = await resend.emails.send({
             from: 'Dead Man\'s Switch <onboarding@resend.dev>', // In production, use your verified domain
             to: email,
             subject: 'Teste de Envio - Dead Man\'s Switch',
@@ -33,6 +37,10 @@ export async function POST(request: Request) {
                 </div>
             `,
         })
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 500 })
+        }
 
         return NextResponse.json({ success: true, data })
     } catch (err: any) {

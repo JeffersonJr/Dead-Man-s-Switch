@@ -182,6 +182,19 @@ export default function SettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             })
+            
+            if (!res.ok) {
+                const text = await res.text()
+                let errorMsg = text
+                try {
+                    const parsed = JSON.parse(text)
+                    errorMsg = parsed.error || text
+                } catch (e) {
+                    // fallback to text if not valid json
+                }
+                throw new Error(errorMsg)
+            }
+            
             const data = await res.json()
             if (data.error) throw new Error(data.error)
             alert('Test email sent successfully! Please check your inbox.')
