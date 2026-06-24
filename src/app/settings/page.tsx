@@ -65,7 +65,7 @@ export default function SettingsPage() {
             // MFA Status
             const { data: mfaData, error: mfaError } = await supabase.auth.mfa.listFactors()
             if (!mfaError && mfaData && mfaData.totp.length > 0) {
-                const verifiedFactor = mfaData.totp.find(f => f.status === 'verified')
+                const verifiedFactor = mfaData.totp.find((f: any) => f.status === 'verified')
                 if (verifiedFactor) {
                     setMfaState(prev => ({ ...prev, isEnrolled: true, factorId: verifiedFactor.id }))
                 }
