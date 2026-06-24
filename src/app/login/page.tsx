@@ -91,22 +91,7 @@ export default function LoginPage() {
                             <LogIn size={20} /> {loading ? 'PROCESSING...' : 'INITIATE ACCESS'}
                         </button>
 
-                        <div className="flex flex-col gap-2">
-                            <button
-                                type="button"
-                                onClick={() => router.push('/auth/recovery')}
-                                className="text-[10px] uppercase tracking-[0.2em] opacity-50 hover:opacity-100 transition-opacity text-center"
-                            >
-                                Forgot Security Passcode?
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => router.push('/signup')}
-                                className="w-full border border-[#00ff41] p-3 hover:bg-[rgba(0,255,65,0.1)] transition-colors text-[10px] uppercase tracking-[0.3em] opacity-60 hover:opacity-100"
-                            >
-                                REGISTER NEW OPERATOR
-                            </button>
-                        </div>
+                        {/* Links removed as per user request */}
                     </div>
                 </form>
 
