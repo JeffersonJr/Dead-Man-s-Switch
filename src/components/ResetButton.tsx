@@ -27,9 +27,15 @@ export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
             if (!user) return
 
             // Update counter_status
+            // Hardcoded 24 hours for now. In a full system, you would read the interval from DB.
+            const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
             const { error: counterError } = await supabase
                 .from('counter_status')
-                .update({ last_reset_at: new Date().toISOString() })
+                .update({ 
+                    last_reset_at: new Date().toISOString(),
+                    deadline_at: deadline,
+                    email_enviado: false 
+                })
                 .eq('user_id', user.id)
 
             if (counterError) throw counterError

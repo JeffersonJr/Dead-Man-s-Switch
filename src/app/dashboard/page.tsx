@@ -61,8 +61,9 @@ export default function DashboardPage() {
         if (!status?.last_reset_at) return
 
         const timer = setInterval(() => {
-            const lastReset = new Date(status.last_reset_at)
-            const nextReset = addHours(lastReset, 24)
+            const nextReset = status.deadline_at 
+                ? new Date(status.deadline_at) 
+                : addHours(new Date(status.last_reset_at), 24)
             const now = new Date()
 
             const diff = nextReset.getTime() - now.getTime()
@@ -117,9 +118,11 @@ export default function DashboardPage() {
         </div>
     )
 
-    const secondsLeft = status?.last_reset_at
-        ? Math.floor((addHours(new Date(status.last_reset_at), 24).getTime() - new Date().getTime()) / 1000)
-        : 100000
+    const secondsLeft = status?.deadline_at
+        ? Math.floor((new Date(status.deadline_at).getTime() - new Date().getTime()) / 1000)
+        : status?.last_reset_at 
+            ? Math.floor((addHours(new Date(status.last_reset_at), 24).getTime() - new Date().getTime()) / 1000)
+            : 100000
 
     const isCritical = secondsLeft <= 60 && secondsLeft > 0
 
