@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: Request) {
     try {
         if (!process.env.RESEND_API_KEY) {
-            return NextResponse.json({ error: 'RESEND_API_KEY is not configured on the server.' }, { status: 500 })
+            return NextResponse.json({ error: 'Chave do Resend não encontrada no .env.local' }, { status: 500 })
         }
         
         const resend = new Resend(process.env.RESEND_API_KEY)
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
         })
 
         if (error) {
+            console.error('[Resend Error] Falha detalhada no envio:', error)
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
