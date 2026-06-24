@@ -199,12 +199,7 @@ export default function SettingsPage() {
             if (data.error) throw new Error(data.error)
             alert('Test email sent successfully! Please check your inbox.')
         } catch (err: any) {
-            let errorMsg = err.message
-            const lowercaseMsg = errorMsg.toLowerCase()
-            if (lowercaseMsg.includes('sandbox') || lowercaseMsg.includes('verify') || lowercaseMsg.includes('domain') || lowercaseMsg.includes('403') || lowercaseMsg.includes('not verified')) {
-                errorMsg = `Erro de Sandbox: ${errorMsg}\n\nVerifique se o e-mail de destino é o mesmo da sua conta do Resend, ou valide seu domínio no painel do Resend.`
-            }
-            alert('Failed to send test email: ' + errorMsg)
+            alert('Failed to send test email: ' + err.message)
         } finally {
             setTestLoading(prev => ({ ...prev, [targetId]: false }))
         }
@@ -541,11 +536,7 @@ export default function SettingsPage() {
                                                     </button>
                                                 )}
                                             </div>
-                                            {target.type === 'email' && (
-                                                <p className="text-[10px] opacity-70 mt-2 text-yellow-500 max-w-sm">
-                                                    ⚠ Aviso: Enquanto o domínio não for verificado, o Resend só permite enviar testes para o seu próprio e-mail cadastrado na plataforma.
-                                                </p>
-                                            )}
+
                                         </div>
                                         <div className="flex items-center gap-4 pt-4">
                                             <label className="flex items-center gap-2 cursor-pointer group">

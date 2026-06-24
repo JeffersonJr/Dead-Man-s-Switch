@@ -17,7 +17,7 @@ export async function POST(request: Request) {
         }
 
         const { data, error } = await resend.emails.send({
-            from: 'Dead Man\'s Switch <onboarding@resend.dev>', // In production, use your verified domain
+            from: 'Jefferson <alerta@dharma.evolves.site>',
             to: email,
             subject: 'Teste de Envio - Dead Man\'s Switch',
             html: `

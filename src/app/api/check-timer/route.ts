@@ -91,7 +91,7 @@ export async function GET(request: Request) {
 
                         try {
                             const data = await resend.emails.send({
-                                from: 'Dead Man\'s Switch <onboarding@resend.dev>', // Replace with your verified domain in production
+                                from: 'Jefferson <alerta@dharma.evolves.site>',
                                 to: target.destination_value,
                                 subject: `🚨 ALERTA: Mensagem Automática de ${userName}`,
                                 html: htmlTemplate,
