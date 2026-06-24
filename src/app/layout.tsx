@@ -1,17 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/next"
+import packageInfo from "../../package.json";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Dharma Station Swan",
@@ -27,10 +18,13 @@ export default function RootLayout({
     <html lang="en">
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`antialiased crt`}
       >
         {children}
         <Analytics />
+        <div className="fixed bottom-4 right-4 text-2xl text-[#00ff41] glow-text font-mono z-50">
+          V.{packageInfo.version}
+        </div>
       </body>
     </html>
   );
