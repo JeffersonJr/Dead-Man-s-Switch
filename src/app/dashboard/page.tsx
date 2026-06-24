@@ -80,6 +80,11 @@ export default function DashboardPage() {
                 setAlarmAudio(null)
             }
 
+            // Play the iconic beep every second during the critical phase
+            if (isHieroglyphs) {
+                playSound('beep')
+            }
+
             // 10-minute warning (600 seconds)
             if (secondsLeft === 600 && !warnTriggered[0]) {
                 warnTriggered[1](true)
