@@ -100,7 +100,11 @@ BEGIN
     
     RETURN new;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Revoke execute from public to fix security warning
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM authenticated;
 
 -- Trigger for new user
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -115,7 +119,7 @@ BEGIN
     NEW.updated_at = now();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 DROP TRIGGER IF EXISTS update_profiles_modtime ON public.profiles;
 CREATE TRIGGER update_profiles_modtime BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
