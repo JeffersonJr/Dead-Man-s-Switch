@@ -4,10 +4,10 @@ export const playSound = (type: 'beep' | 'reset' | 'alarm' | 'fail') => {
     if (typeof window === 'undefined') return
 
     const soundMap = {
-        beep: '/sounds/beep.mp3',
-        reset: '/sounds/reset.mp3',
-        alarm: '/sounds/alarm.mp3',
-        fail: '/sounds/fail.mp3',
+        beep: '/sounds/beep.wav',
+        reset: '/sounds/reset.wav',
+        alarm: '/sounds/alarm.wav',
+        fail: '/sounds/fail.wav',
     }
 
     const audio = new Audio(soundMap[type])
