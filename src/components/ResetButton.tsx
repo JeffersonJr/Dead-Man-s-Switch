@@ -26,19 +26,18 @@ export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
 
-            // Update counter_status
-            // Hardcoded 24 hours for now. In a full system, you would read the interval from DB.
-            const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            // Update counter_status (only updating last_reset_at because deadline_at and email_enviado don't exist in the current schema)
             const { error: counterError } = await supabase
                 .from('counter_status')
                 .update({ 
-                    last_reset_at: new Date().toISOString(),
-                    deadline_at: deadline,
-                    email_enviado: false 
+                    last_reset_at: new Date().toISOString()
                 })
                 .eq('user_id', user.id)
 
-            if (counterError) throw counterError
+            if (counterError) {
+                console.error('Supabase update error:', counterError)
+                throw new Error(counterError.message || 'Failed to update counter_status')
+            }
 
             // Log the reset
             await supabase.from('logs').insert({
@@ -49,9 +48,9 @@ export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
             setSequence('')
             playSound('reset')
             onReset()
-        } catch (error) {
+        } catch (error: any) {
             console.error('Reset failed:', error)
-            alert('CRITICAL SYSTEM ERROR: RESET FAILED')
+            alert(`CRITICAL SYSTEM ERROR: RESET FAILED - ${error?.message || JSON.stringify(error)}`)
         } finally {
             setLoading(false)
         }
