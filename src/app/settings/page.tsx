@@ -214,7 +214,21 @@ export default function SettingsPage() {
 
     const handleEnable2FA = async () => {
         setMfaState(prev => ({ ...prev, loading: true }))
-        const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' })
+        
+        // Clean up any dangling unverified factors first
+        const { data: listData } = await supabase.auth.mfa.listFactors()
+        if (listData?.totp) {
+            const unverified = listData.totp.filter(f => f.status === 'unverified')
+            for (const f of unverified) {
+                await supabase.auth.mfa.unenroll({ factorId: f.id })
+            }
+        }
+
+        const { data, error } = await supabase.auth.mfa.enroll({ 
+            factorType: 'totp',
+            issuer: 'Dead Mans Switch',
+            friendlyName: 'Device ' + new Date().getTime()
+        })
         if (error) {
             alert(error.message)
             setMfaState(prev => ({ ...prev, loading: false }))
@@ -407,10 +421,13 @@ export default function SettingsPage() {
                             {!mfaState.isEnrolled && mfaState.qrCode && (
                                 <div className="space-y-4 pt-4">
                                     <p className="text-[10px] text-center uppercase">Scan with Authenticator App</p>
-                                    <div 
-                                        className="bg-white p-2 w-40 h-40 mx-auto"
-                                        dangerouslySetInnerHTML={{ __html: mfaState.qrCode }}
-                                    />
+                                    <div className="bg-white p-2 w-48 h-48 mx-auto flex items-center justify-center">
+                                        <img 
+                                            src={mfaState.qrCode} 
+                                            alt="2FA QR Code" 
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
                                     <div>
                                         <label className="text-[10px] opacity-40 block uppercase mb-1">Verify 6-Digit Code</label>
                                         <input 
