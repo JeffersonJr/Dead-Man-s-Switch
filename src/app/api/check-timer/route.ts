@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { Resend } from 'resend'
 
 export const dynamic = 'force-dynamic'
 
+const resend = new Resend(process.env.RESEND_API_KEY)
+
 export async function GET(request: Request) {
-    // 1. Verify Vercel Cron Secret (Optional but recommended to prevent abuse)
+    // 1. (Optional) Verify Cron Secret to prevent abuse. 
+    // You can uncomment this if cron-job.org supports custom headers, or leave it unprotected if the route is idempotent.
     const authHeader = request.headers.get('authorization')
     if (
         process.env.CRON_SECRET && 
@@ -25,9 +29,16 @@ export async function GET(request: Request) {
 
     try {
         // 3. Find all users whose deadline has passed AND email hasn't been sent yet
+        // Also fetch the user's name from the profiles table
         const { data: expiredCounters, error } = await supabase
             .from('counter_status')
-            .select('user_id')
+            .select(`
+                user_id,
+                profiles (
+                    full_name,
+                    email
+                )
+            `)
             .lt('deadline_at', new Date().toISOString())
             .eq('email_enviado', false)
 
@@ -38,8 +49,11 @@ export async function GET(request: Request) {
         }
 
         // 4. Process each expired user
+        let processedCount = 0
+
         for (const counter of expiredCounters) {
-            console.log(`[PROTOCOL ECHO] Triggered for user: ${counter.user_id}`)
+            const userName = (counter.profiles as any)?.full_name || (counter.profiles as any)?.email || 'Um usuário'
+            console.log(`[PROTOCOL ECHO] Triggered for user: ${userName} (${counter.user_id})`)
 
             // Fetch notification targets for this user
             const { data: targets } = await supabase
@@ -50,10 +64,47 @@ export async function GET(request: Request) {
 
             if (targets && targets.length > 0) {
                 for (const target of targets) {
-                    // TODO: Implement actual Email/WhatsApp provider logic here
-                    // e.g. await resend.emails.send({...}) or Twilio API
-                    console.log(`[ACTION] Sending ${target.type} to ${target.destination_value}`)
-                    console.log(`[MESSAGE] ${target.message}`)
+                    if (target.type === 'email') {
+                        // Send Email via Resend
+                        const htmlTemplate = `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                            <div style="background-color: #d32f2f; padding: 20px; text-align: center;">
+                                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">ALERTA CRÍTICO DE SEGURANÇA</h1>
+                            </div>
+                            <div style="padding: 30px; background-color: #ffffff; color: #333333; line-height: 1.6;">
+                                <p style="font-size: 16px;">Olá <strong>${target.target_name || 'Contato'}</strong>,</p>
+                                <p style="font-size: 16px;">Você está recebendo este e-mail automático do sistema <strong>Dead Man's Switch</strong> porque o tempo limite de verificação de segurança de <strong>${userName}</strong> chegou a zero.</p>
+                                
+                                <div style="background-color: #f9f9f9; border-left: 4px solid #d32f2f; padding: 15px; margin: 25px 0;">
+                                    <h3 style="margin-top: 0; color: #d32f2f; font-size: 14px; text-transform: uppercase;">Mensagem Deixada:</h3>
+                                    <p style="margin-bottom: 0; font-style: italic;">"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"</p>
+                                </div>
+
+                                <p style="font-size: 16px;">Por favor, tente entrar em contato com esta pessoa imediatamente.</p>
+                                
+                                <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
+                                <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">
+                                    Este é um e-mail automatizado gerado pelo sistema Dead Man's Switch. Por favor, não responda.
+                                </p>
+                            </div>
+                        </div>
+                        `
+
+                        try {
+                            const data = await resend.emails.send({
+                                from: 'Dead Man\'s Switch <onboarding@resend.dev>', // Replace with your verified domain in production
+                                to: target.destination_value,
+                                subject: `🚨 ALERTA: Mensagem Automática de ${userName}`,
+                                html: htmlTemplate,
+                            })
+                            console.log(`[ACTION] Email sent to ${target.destination_value}`, data)
+                        } catch (err) {
+                            console.error(`[ERROR] Failed to send email to ${target.destination_value}:`, err)
+                        }
+                    } else if (target.type === 'whatsapp') {
+                        // WhatsApp logic placeholder
+                        console.log(`[ACTION] WhatsApp sending not yet implemented for ${target.destination_value}`)
+                    }
                 }
             } else {
                 console.log(`[WARNING] No active targets found for user ${counter.user_id}`)
@@ -64,11 +115,13 @@ export async function GET(request: Request) {
                 .from('counter_status')
                 .update({ email_enviado: true })
                 .eq('user_id', counter.user_id)
+            
+            processedCount++
         }
 
         return NextResponse.json({ 
             success: true, 
-            processed: expiredCounters.length 
+            processed: processedCount 
         })
     } catch (err: any) {
         console.error('Timer check failed:', err)
