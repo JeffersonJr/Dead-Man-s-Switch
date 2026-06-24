@@ -81,8 +81,8 @@ export default function DashboardPage() {
                 setAlarmAudio(null)
             }
 
-            // Play the iconic beep every second during the critical phase
-            if (isHieroglyphs) {
+            // Play the iconic beep every second
+            if (secondsLeft > 0) {
                 playSound('beep')
             }
 
