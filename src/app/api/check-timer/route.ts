@@ -176,7 +176,7 @@ export async function GET(request: Request) {
                         if (!telegramToken || !telegramChatId) {
                             console.error('[ERROR] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing for 10-min warning.')
                         } else {
-                            const warningMessage = `⚠️ *AVISO PRÉVIO - DEAD MAN'S SWITCH* ⚠️\n\nFaltam menos de 10 minutos para o timer de *${userName}* expirar.\nPrazo final (Servidor): ${deadline.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
+                            const warningMessage = `⚠️ *AVISO PRÉVIO - DEAD MAN'S SWITCH* ⚠️\n\nFaltam menos de 10 minutos para o timer de *${userName}* expirar.\nPrazo final (Servidor): ${deadline.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}\n\nAcesse para resetar: https://dharma.evolves.site/dashboard`
                             
                             const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                                 method: 'POST',
