@@ -29,32 +29,47 @@ export async function GET(request: Request) {
     try {
         // 3. Find all users whose deadline has passed AND email hasn't been sent yet
         // Also fetch the user's name from the profiles table
-        const { data: expiredCounters, error } = await supabase
+        const now = new Date()
+        const tenMinsFromNow = new Date(now.getTime() + 10 * 60000)
+
+        // 3. Find all users whose deadline is <= 10 mins from now AND email hasn't been sent yet
+        const { data: activeCounters, error } = await supabase
             .from('counter_status')
             .select(`
                 user_id,
+                deadline_at,
+                email_enviado,
+                warning_10m_sent,
                 profiles (
                     full_name,
                     email
                 )
             `)
-            .lt('deadline_at', new Date().toISOString())
+            .lte('deadline_at', tenMinsFromNow.toISOString())
             .eq('email_enviado', false)
 
         if (error) throw error
 
-        if (!expiredCounters || expiredCounters.length === 0) {
-            return NextResponse.json({ message: 'No expired counters found' })
+        if (!activeCounters || activeCounters.length === 0) {
+            return NextResponse.json({ message: 'No counters expiring soon or expired' })
         }
 
-        // 4. Process each expired user
+        // 4. Process each user
         let processedCount = 0
 
-        for (const counter of expiredCounters) {
+        for (const counter of activeCounters) {
             const userName = (counter.profiles as any)?.full_name || (counter.profiles as any)?.email || 'Um usuário'
-            console.log(`[PROTOCOL ECHO] Triggered for user: ${userName} (${counter.user_id})`)
+            
+            const deadline = new Date(counter.deadline_at)
+            const timeDiffMs = deadline.getTime() - now.getTime()
+            const timeDiffMins = timeDiffMs / 60000
 
-            // Fetch notification targets for this user
+            console.log(`[DEBUG TIME] User: ${userName} | Now (Server): ${now.toISOString()} | Deadline (Supabase): ${deadline.toISOString()} | Diff(mins): ${timeDiffMins.toFixed(2)}`)
+
+            if (timeDiffMins <= 0) {
+                console.log(`[PROTOCOL ECHO] Triggered FINAL ALERT for user: ${userName} (${counter.user_id})`)
+
+                // Fetch notification targets for this user
             const { data: targets } = await supabase
                 .from('notification_targets')
                 .select('*')
@@ -150,6 +165,47 @@ export async function GET(request: Request) {
                 .eq('user_id', counter.user_id)
             
             processedCount++
+            } else if (timeDiffMins > 0 && timeDiffMins <= 10) {
+                if (!counter.warning_10m_sent) {
+                    console.log(`[PROTOCOL ECHO] Triggered 10-MIN WARNING for user: ${userName} (${counter.user_id})`)
+                    
+                    try {
+                        const telegramToken = process.env.TELEGRAM_BOT_TOKEN
+                        const telegramChatId = process.env.TELEGRAM_CHAT_ID
+
+                        if (!telegramToken || !telegramChatId) {
+                            console.error('[ERROR] TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID missing for 10-min warning.')
+                        } else {
+                            const warningMessage = `⚠️ *AVISO PRÉVIO - DEAD MAN'S SWITCH* ⚠️\n\nFaltam menos de 10 minutos para o timer de *${userName}* expirar.\nPrazo final (Servidor): ${deadline.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
+                            
+                            const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    chat_id: telegramChatId,
+                                    text: warningMessage
+                                })
+                            })
+                            
+                            if (!response.ok) {
+                                const errorText = await response.text()
+                                throw new Error(`Telegram API error: ${response.status} - ${errorText}`)
+                            }
+                            console.log(`[ACTION] 10-min warning Telegram sent to chat ${telegramChatId}`)
+                            
+                            // Mark warning as sent
+                            await supabase
+                                .from('counter_status')
+                                .update({ warning_10m_sent: true })
+                                .eq('user_id', counter.user_id)
+                        }
+                    } catch (err) {
+                        console.error(`[ERROR] Failed to send 10-min warning via Telegram:`, err)
+                    }
+                }
+            }
         }
 
         return NextResponse.json({ 

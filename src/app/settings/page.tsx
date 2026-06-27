@@ -18,6 +18,8 @@ export default function SettingsPage() {
     const [profile, setProfile] = useState<any>(null)
     const [profileData, setProfileData] = useState({ full_name: '', email: '', phone: '' })
     const [testLoading, setTestLoading] = useState<{[key: string]: boolean}>({})
+    const [toastMessage, setToastMessage] = useState<{title: string, desc: string, type: 'error'|'success'} | null>(null)
+    const [telegramTestLoading, setTelegramTestLoading] = useState(false)
     
     // Security states
     const [passwordData, setPasswordData] = useState({ new: '', confirm: '' })
@@ -291,6 +293,35 @@ export default function SettingsPage() {
         setMfaState(prev => ({ ...prev, loading: false }))
     }
 
+    const handleTestTelegram = async () => {
+        setTelegramTestLoading(true)
+        try {
+            const res = await fetch('/api/test-telegram', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            
+            if (!res.ok) {
+                const text = await res.text()
+                let errorMsg = text
+                try {
+                    const parsed = JSON.parse(text)
+                    errorMsg = parsed.error || text
+                } catch (e) {}
+                throw new Error(errorMsg)
+            }
+            
+            const data = await res.json()
+            if (data.error) throw new Error(data.error)
+            setToastMessage({ title: 'Telegram Validado', desc: data.message || 'Integração OK!', type: 'success' })
+            setTimeout(() => setToastMessage(null), 5000)
+        } catch (err: any) {
+            setToastMessage({ title: 'Erro de Validação (Telegram)', desc: err.message, type: 'error' })
+            setTimeout(() => setToastMessage(null), 10000)
+        } finally {
+            setTelegramTestLoading(false)
+        }
+    }
 
     if (loading) return (
         <div className="min-h-screen bg-black flex items-center justify-center text-[#00ff41] font-mono crt">
@@ -483,13 +514,22 @@ export default function SettingsPage() {
                             </h2>
                             <p className="text-[10px] opacity-50 uppercase tracking-[0.2em]">Protocol ECHO Targets (Max 3)</p>
                         </div>
-                        <button
-                            onClick={handleAddTarget}
-                            disabled={targets.length >= 3}
-                            className={`text-[10px] border px-4 py-2 flex items-center gap-2 transition-colors ${targets.length >= 3 ? 'border-[#00ff41]/20 text-[#00ff41]/20 cursor-not-allowed' : 'border-[#00ff41] hover:bg-[#00ff41]/10'}`}
-                        >
-                            <Plus size={14} /> NEW ENTRY
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button
+                                onClick={handleTestTelegram}
+                                disabled={telegramTestLoading}
+                                className="text-[10px] border border-[#00ff41] text-[#00ff41] px-4 py-2 hover:bg-[#00ff41] hover:text-black transition-colors flex items-center justify-center gap-2 font-bold whitespace-nowrap"
+                            >
+                                {telegramTestLoading ? 'TESTANDO...' : 'VALIDAR TELEGRAM'}
+                            </button>
+                            <button
+                                onClick={handleAddTarget}
+                                disabled={targets.length >= 3}
+                                className={`text-[10px] border px-4 py-2 flex items-center justify-center gap-2 transition-colors ${targets.length >= 3 ? 'border-[#00ff41]/20 text-[#00ff41]/20 cursor-not-allowed' : 'border-[#00ff41] hover:bg-[#00ff41]/10'}`}
+                            >
+                                <Plus size={14} /> NEW ENTRY
+                            </button>
+                        </div>
                     </div>
 
                     <div className="space-y-6">
@@ -590,6 +630,14 @@ export default function SettingsPage() {
                     </div>
                 </div>
             </div>
+
+            {toastMessage && (
+                <div className={`fixed bottom-4 right-4 max-w-sm p-4 border ${toastMessage.type === 'error' ? 'bg-red-950/90 border-red-500 text-red-500' : 'bg-black/90 border-[#00ff41] text-[#00ff41]'} shadow-[0_0_15px_rgba(0,0,0,0.5)] z-50`}>
+                    <h4 className="font-bold mb-1 text-sm uppercase">{toastMessage.title}</h4>
+                    <p className="text-xs opacity-90 font-mono break-words">{toastMessage.desc}</p>
+                    <button onClick={() => setToastMessage(null)} className="absolute top-2 right-2 opacity-50 hover:opacity-100">✕</button>
+                </div>
+            )}
         </main>
     )
 }
