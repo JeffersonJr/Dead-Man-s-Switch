@@ -13,7 +13,7 @@ export async function POST(request: Request) {
             }, { status: 400 })
         }
 
-        const message = 'Nível de segurança ativo: Integração do Telegram com o projeto Dharma realizada com sucesso!'
+        const message = 'Nível de segurança ativo: Integração do Telegram com o projeto Dharma realizada com sucesso!\n\nAcesse: https://dharma.evolves.site/dashboard'
 
         const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
             method: 'POST',
