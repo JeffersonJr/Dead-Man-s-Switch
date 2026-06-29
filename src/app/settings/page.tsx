@@ -836,7 +836,7 @@ export default function SettingsPage() {
                                         {contact.message && (
                                             <details className="group">
                                                 <summary className="text-[8px] opacity-40 uppercase cursor-pointer hover:opacity-70 transition-opacity select-none">
-                                                    ▶ Preview (com {{nome}} = "{contact.name || 'Contato'}")
+                                                    {'▶ Preview (com {{nome}} = "'}{contact.name || 'Contato'}{'\")'}
                                                 </summary>
                                                 <div
                                                     className="mt-2 p-3 border border-[#00ff41]/10 bg-black/30 text-xs leading-relaxed prose-invert max-h-32 overflow-y-auto"
