@@ -45,6 +45,7 @@ export async function POST(request: Request) {
             .from('notification_targets')
             .select('*')
             .eq('user_id', user_id)
+            .eq('enabled', true)
 
         if (targetError) {
             console.error('ERRO FATAL ao buscar contatos no Supabase:', targetError)
@@ -116,7 +117,8 @@ export async function POST(request: Request) {
                             },
                             body: JSON.stringify({
                                 chat_id: target.destination_value,
-                                text: telegramMessage
+                                text: telegramMessage,
+                                parse_mode: 'Markdown'
                             })
                         })
 

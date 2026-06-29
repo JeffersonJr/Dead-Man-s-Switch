@@ -149,7 +149,8 @@ export async function GET(request: Request) {
                                 },
                                 body: JSON.stringify({
                                     chat_id: target.destination_value,
-                                    text: telegramMessage
+                                    text: telegramMessage,
+                                    parse_mode: 'Markdown'
                                 })
                             })
 
@@ -168,16 +169,17 @@ export async function GET(request: Request) {
                     }
                 }
             } else {
-                console.log(`[WARNING] No active targets found for user ${counter.user_id}`)
+                console.log(`[WARNING] No active targets found for user ${counter.user_id}. NOT marking as sent.`)
             }
 
-            // Mark as sent so we don't trigger it again
-            await supabase
-                .from('counter_status')
-                .update({ email_enviado: true })
-                .eq('user_id', counter.user_id)
-            
-            processedCount++
+            if (targets && targets.length > 0) {
+                // Mark as sent only when we had contacts to dispatch
+                await supabase
+                    .from('counter_status')
+                    .update({ email_enviado: true })
+                    .eq('user_id', counter.user_id)
+                processedCount++
+            }
             } else if (timeDiffMins > 0 && timeDiffMins <= 10) {
                 if (!counter.warning_10m_sent) {
                     console.log(`[PROTOCOL ECHO] Triggered 10-MIN WARNING for user: ${userName} (${counter.user_id})`)

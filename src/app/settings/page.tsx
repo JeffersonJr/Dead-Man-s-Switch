@@ -207,34 +207,40 @@ export default function SettingsPage() {
             // Save email
             if (contact.email) {
                 if (contact.emailId) {
-                    await supabase.from('notification_targets').update({
+                    const { error } = await supabase.from('notification_targets').update({
                         target_name: contact.name, destination_value: contact.email, message: contact.message, enabled: contact.enabled
                     }).eq('id', contact.emailId)
+                    if (error) throw new Error(`Email update failed: ${error.message}`)
                 } else {
                     const { data, error } = await supabase.from('notification_targets').insert({
                         user_id: user.id, type: 'email', target_name: contact.name, destination_value: contact.email, message: contact.message, enabled: contact.enabled
                     }).select().single()
+                    if (error) throw new Error(`Email insert failed: ${error.message}`)
                     if (data) contact.emailId = data.id
                 }
             } else if (contact.emailId) {
-                await supabase.from('notification_targets').delete().eq('id', contact.emailId)
+                const { error } = await supabase.from('notification_targets').delete().eq('id', contact.emailId)
+                if (error) throw new Error(`Email delete failed: ${error.message}`)
                 contact.emailId = null
             }
 
             // Save telegram
             if (contact.telegram) {
                 if (contact.telegramId) {
-                    await supabase.from('notification_targets').update({
+                    const { error } = await supabase.from('notification_targets').update({
                         target_name: contact.name, destination_value: contact.telegram, message: contact.message, enabled: contact.enabled
                     }).eq('id', contact.telegramId)
+                    if (error) throw new Error(`Telegram update failed: ${error.message}`)
                 } else {
                     const { data, error } = await supabase.from('notification_targets').insert({
                         user_id: user.id, type: 'telegram', target_name: contact.name, destination_value: contact.telegram, message: contact.message, enabled: contact.enabled
                     }).select().single()
+                    if (error) throw new Error(`Telegram insert failed: ${error.message}`)
                     if (data) contact.telegramId = data.id
                 }
             } else if (contact.telegramId) {
-                await supabase.from('notification_targets').delete().eq('id', contact.telegramId)
+                const { error } = await supabase.from('notification_targets').delete().eq('id', contact.telegramId)
+                if (error) throw new Error(`Telegram delete failed: ${error.message}`)
                 contact.telegramId = null
             }
             
@@ -246,6 +252,7 @@ export default function SettingsPage() {
         }
         setSaving(false)
     }
+
 
     const handleDeleteContact = async (contact: Contact) => {
         if (!confirm('PROTOCOL ECHO: Delete contact data?')) return

@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.logs (
 
 -- 4. Notification Targets
 DO $$ BEGIN
-    CREATE TYPE notification_type AS ENUM ('email', 'whatsapp');
+    CREATE TYPE notification_type AS ENUM ('email', 'telegram', 'whatsapp');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
