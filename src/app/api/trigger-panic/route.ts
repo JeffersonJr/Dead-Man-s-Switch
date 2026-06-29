@@ -62,27 +62,15 @@ export async function POST(request: Request) {
                 if (target.type === 'email') {
                     console.log(`Tentando disparar E-mail para: ${target.destination_value}...`)
                     // Send Email via Resend
+                    const customMsg = (target.message || '').replace(/\n/g, '<br>')
                     const htmlTemplate = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                         <div style="background-color: #d32f2f; padding: 20px; text-align: center;">
-                            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">ALERTA CRÍTICO DE SEGURANÇA</h1>
+                            <h1 style="color: #ffffff; margin: 0; font-size: 24px;">🚨 MENSAGEM DE EMERGÊNCIA</h1>
                         </div>
-                        <div style="padding: 30px; background-color: #ffffff; color: #333333; line-height: 1.6;">
-                            <p style="font-size: 16px;">Olá <strong>${target.target_name || 'Contato'}</strong>,</p>
-                            <p style="font-size: 16px;">Você está recebendo este e-mail automático do sistema <strong>Dead Man's Switch</strong> porque o gatilho manual de PÂNICO de <strong>${userName}</strong> foi ativado.</p>
-                            
-                            <div style="background-color: #f9f9f9; border-left: 4px solid #d32f2f; padding: 15px; margin: 25px 0;">
-                                <h3 style="margin-top: 0; color: #d32f2f; font-size: 14px; text-transform: uppercase;">Mensagem Deixada:</h3>
-                                <p style="margin-bottom: 0; font-style: italic;">"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"</p>
-                            </div>
-
-                            <p style="font-size: 16px;">Por favor, tente entrar em contato com esta pessoa imediatamente.</p>
+                        <div style="padding: 30px; background-color: #ffffff; color: #333333; line-height: 1.8; font-size: 16px;">
+                            <p>${customMsg}</p>
                             ${locationHtml}
-                            
-                            <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
-                            <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">
-                                Este é um e-mail automatizado gerado pelo sistema Dead Man's Switch. Por favor, não responda.
-                            </p>
                         </div>
                     </div>
                     `
@@ -108,7 +96,7 @@ export async function POST(request: Request) {
                             continue
                         }
 
-                        const telegramMessage = `🚨 *ALERTA CRÍTICO DE SEGURANÇA (PÂNICO)* 🚨\n\nOlá *${target.target_name || 'Contato'}*,\nVocê está recebendo esta mensagem automática do *Dead Man's Switch* porque o gatilho manual de PÂNICO de *${userName}* foi ativado.\n\n*Mensagem Deixada:*\n"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"\n\nPor favor, tente entrar em contato imediatamente.${locationText}`
+                        const telegramMessage = `${target.message || ''}${locationText}`
 
                         const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                             method: 'POST',
