@@ -186,3 +186,85 @@ body.crt {
   box-shadow: inset 0 0 50px #000;
   border: 4px solid #333;
 }
+
+/* ─────────────────────────────────────────────
+   CRT RETRACE LINE
+   A bright horizontal beam that sweeps the
+   screen from top to bottom periodically,
+   simulating an electron gun retrace.
+───────────────────────────────────────────── */
+
+/* The retrace layer sits above everything */
+.crt-retrace {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Primary retrace beam */
+.crt-retrace::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -4px;
+  height: 4px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 255, 65, 0.04) 20%,
+    rgba(0, 255, 65, 0.18) 50%,
+    rgba(0, 255, 65, 0.04) 80%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 8px 2px rgba(0, 255, 65, 0.25),
+    0 0 20px 4px rgba(0, 255, 65, 0.08);
+  animation: retrace-primary 8s linear infinite;
+  animation-delay: 2s;
+}
+
+/* Secondary retrace beam (faint, different timing) */
+.crt-retrace::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -2px;
+  height: 2px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 255, 65, 0.10) 50%,
+    transparent 100%
+  );
+  box-shadow: 0 0 6px 1px rgba(0, 255, 65, 0.12);
+  animation: retrace-secondary 13s linear infinite;
+  animation-delay: 6s;
+}
+
+@keyframes retrace-primary {
+  0%   { top: -4px;   opacity: 0; }
+  2%   { opacity: 1; }
+  95%  { opacity: 0.8; }
+  100% { top: 100vh;  opacity: 0; }
+}
+
+@keyframes retrace-secondary {
+  0%   { top: -2px;   opacity: 0; }
+  3%   { opacity: 0.6; }
+  96%  { opacity: 0.4; }
+  100% { top: 100vh;  opacity: 0; }
+}
+
+/* Rolling scanline interference — very subtle, slow drift */
+@keyframes roll {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
+
+.crt::before {
+  animation: roll 60s linear infinite;
+}
