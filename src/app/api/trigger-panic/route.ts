@@ -33,6 +33,10 @@ export async function POST(request: Request) {
         const userName = profile?.full_name || profile?.email || 'Usuário Desconhecido'
         const locationLink = profile?.realtime_location_link
         
+        console.log('--- INICIANDO GATILHO DE PÂNICO ---')
+        console.log('Usuário:', userName)
+        console.log('Link de rastreamento encontrado:', locationLink || 'Nenhum')
+        
         const locationText = locationLink ? `\n\n📍 Rastreamento em tempo real: ${locationLink}` : ''
         const locationHtml = locationLink ? `<br><br>📍 <strong>Rastreamento em tempo real:</strong> <a href="${locationLink}" style="color: #d32f2f;">${locationLink}</a>` : ''
 
@@ -43,14 +47,19 @@ export async function POST(request: Request) {
             .eq('user_id', user_id)
 
         if (targetError) {
+            console.error('ERRO FATAL ao buscar contatos no Supabase:', targetError)
             throw targetError
         }
+
+        console.log('Contatos encontrados na tabela notification_targets:', targets?.length || 0)
 
         let processedCount = 0
 
         if (targets && targets.length > 0) {
             for (const target of targets) {
+                console.log(`\nProcessando contato: ${target.target_name} (${target.type})`)
                 if (target.type === 'email') {
+                    console.log(`Tentando disparar E-mail para: ${target.destination_value}...`)
                     // Send Email via Resend
                     const htmlTemplate = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -77,19 +86,20 @@ export async function POST(request: Request) {
                     </div>
                     `
 
-                    try {
-                        const data = await resend.emails.send({
-                            from: 'Jefferson <alerta@dharma.evolves.site>',
-                            to: target.destination_value,
-                            subject: `🚨 ALERTA DE PÂNICO: Mensagem de ${userName}`,
-                            html: htmlTemplate,
-                        })
-                        console.log(`[PANIC ACTION] Email sent to ${target.destination_value}`, data)
-                        processedCount++
-                    } catch (err) {
-                        console.error(`[ERROR] Failed to send email to ${target.destination_value}:`, err)
-                    }
+                        try {
+                            const data = await resend.emails.send({
+                                from: 'Jefferson <alerta@dharma.evolves.site>',
+                                to: target.destination_value,
+                                subject: `🚨 ALERTA DE PÂNICO: Mensagem de ${userName}`,
+                                html: htmlTemplate,
+                            })
+                            console.log(`[PANIC ACTION] SUCESSO! E-mail enviado para ${target.destination_value}`, data)
+                            processedCount++
+                        } catch (err) {
+                            console.error(`ERRO FATAL ao tentar enviar E-mail para ${target.destination_value}:`, err)
+                        }
                 } else if (target.type === 'telegram') {
+                    console.log(`Tentando disparar Telegram para: ${target.destination_value}...`)
                     try {
                         const telegramToken = process.env.TELEGRAM_BOT_TOKEN
                         if (!telegramToken) {
@@ -112,14 +122,17 @@ export async function POST(request: Request) {
 
                         if (!response.ok) {
                             const errorText = await response.text()
+                            console.error(`ERRO FATAL na API do Telegram: ${response.status} - ${errorText}`)
                             throw new Error(`Telegram API error: ${response.status} - ${errorText}`)
                         }
 
-                        console.log(`[PANIC ACTION] Telegram sent to ${target.destination_value}`)
+                        console.log(`[PANIC ACTION] SUCESSO! Telegram enviado para ${target.destination_value}`)
                         processedCount++
                     } catch (err) {
-                        console.error(`[ERROR] Failed to send Telegram to ${target.destination_value}:`, err)
+                        console.error(`ERRO FATAL ao tentar enviar Telegram para ${target.destination_value}:`, err)
                     }
+                } else {
+                    console.log(`Tipo de contato não suportado/ignorado: ${target.type}`)
                 }
             }
         }
@@ -131,7 +144,7 @@ export async function POST(request: Request) {
             processed: processedCount 
         })
     } catch (err: any) {
-        console.error('Panic trigger failed:', err)
+        console.error('ERRO FATAL: Falha geral no trigger-panic:', err)
         return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }

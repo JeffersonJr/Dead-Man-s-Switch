@@ -76,15 +76,24 @@ export async function GET(request: Request) {
                 console.log(`[PROTOCOL ECHO] Triggered FINAL ALERT for user: ${userName} (${counter.user_id})`)
 
                 // Fetch notification targets for this user
-            const { data: targets } = await supabase
+            const { data: targets, error: targetError } = await supabase
                 .from('notification_targets')
                 .select('*')
                 .eq('user_id', counter.user_id)
                 .eq('enabled', true)
 
+            if (targetError) {
+                console.error('ERRO FATAL ao buscar contatos no Supabase para check-timer:', targetError)
+            }
+
+            console.log(`Contatos habilitados encontrados:`, targets?.length || 0)
+            console.log(`Link de rastreamento:`, locationLink || 'Nenhum')
+
             if (targets && targets.length > 0) {
                 for (const target of targets) {
+                    console.log(`\nProcessando contato: ${target.target_name} (${target.type})`)
                     if (target.type === 'email') {
+                        console.log(`Tentando disparar E-mail para: ${target.destination_value}...`)
                         // Send Email via Resend
                         const htmlTemplate = `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -118,11 +127,12 @@ export async function GET(request: Request) {
                                 subject: `🚨 ALERTA: Mensagem Automática de ${userName}`,
                                 html: htmlTemplate,
                             })
-                            console.log(`[ACTION] Email sent to ${target.destination_value}`, data)
+                            console.log(`[ACTION] SUCESSO! E-mail enviado para ${target.destination_value}`, data)
                         } catch (err) {
-                            console.error(`[ERROR] Failed to send email to ${target.destination_value}:`, err)
+                            console.error(`ERRO FATAL ao tentar enviar E-mail para ${target.destination_value}:`, err)
                         }
                     } else if (target.type === 'telegram') {
+                        console.log(`Tentando disparar Telegram para: ${target.destination_value}...`)
                         try {
                             const telegramToken = process.env.TELEGRAM_BOT_TOKEN
                             if (!telegramToken) {
@@ -145,13 +155,16 @@ export async function GET(request: Request) {
 
                             if (!response.ok) {
                                 const errorText = await response.text()
+                                console.error(`ERRO FATAL na API do Telegram: ${response.status} - ${errorText}`)
                                 throw new Error(`Telegram API error: ${response.status} - ${errorText}`)
                             }
 
-                            console.log(`[ACTION] Telegram sent to ${target.destination_value}`)
+                            console.log(`[ACTION] SUCESSO! Telegram enviado para ${target.destination_value}`)
                         } catch (err) {
-                            console.error(`[ERROR] Failed to send Telegram to ${target.destination_value}:`, err)
+                            console.error(`ERRO FATAL ao tentar enviar Telegram para ${target.destination_value}:`, err)
                         }
+                    } else {
+                        console.log(`Tipo de contato não suportado/ignorado: ${target.type}`)
                     }
                 }
             } else {
@@ -213,7 +226,7 @@ export async function GET(request: Request) {
             processed: processedCount 
         })
     } catch (err: any) {
-        console.error('Timer check failed:', err)
+        console.error('ERRO FATAL: Falha geral no check-timer:', err)
         return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }
