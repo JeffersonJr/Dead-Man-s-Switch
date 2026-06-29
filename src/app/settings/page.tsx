@@ -786,13 +786,69 @@ export default function SettingsPage() {
                                         </div>
                                     </div>
 
-                                    <div className="lg:col-span-6 space-y-1">
-                                        <label className="text-[8px] opacity-40 uppercase">Custom Message</label>
+                                    <div className="lg:col-span-6 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[8px] opacity-40 uppercase">Custom Message <span className="opacity-60">(HTML aceito)</span></label>
+                                        </div>
+
+                                        {/* Tag chips */}
+                                        <div className="flex flex-wrap gap-2 pb-1">
+                                            {[
+                                                { tag: '{{nome}}',  desc: 'Nome do contato' },
+                                                { tag: '{{data}}',  desc: 'Data atual' },
+                                                { tag: '{{hora}}',  desc: 'Hora atual' },
+                                            ].map(({ tag, desc }) => (
+                                                <button
+                                                    key={tag}
+                                                    type="button"
+                                                    title={desc}
+                                                    onClick={() => {
+                                                        const ta = document.getElementById(`msg-${contact.id}`) as HTMLTextAreaElement | null
+                                                        if (!ta) return
+                                                        const start = ta.selectionStart
+                                                        const end   = ta.selectionEnd
+                                                        const val   = contact.message
+                                                        const next  = val.slice(0, start) + tag + val.slice(end)
+                                                        handleUpdateContact(contact.id, 'message', next)
+                                                        requestAnimationFrame(() => {
+                                                            ta.focus()
+                                                            ta.setSelectionRange(start + tag.length, start + tag.length)
+                                                        })
+                                                    }}
+                                                    className="px-2 py-0.5 text-[9px] font-mono border border-[#00ff41]/40 text-[#00ff41]/70 hover:border-[#00ff41] hover:text-[#00ff41] hover:bg-[#00ff41]/10 transition-all tracking-wide"
+                                                >
+                                                    {tag}
+                                                </button>
+                                            ))}
+                                            <span className="text-[8px] opacity-30 self-center ml-1">↑ clique para inserir na posição do cursor</span>
+                                        </div>
+
                                         <textarea
+                                            id={`msg-${contact.id}`}
                                             value={contact.message}
                                             onChange={(e) => handleUpdateContact(contact.id, 'message', e.target.value)}
-                                            className="w-full h-32 bg-black/50 border border-[#00ff41]/20 p-3 text-xs font-mono resize-none focus:border-[#00ff41]/50 focus:outline-none"
+                                            className="w-full h-36 bg-black/50 border border-[#00ff41]/20 p-3 text-xs font-mono resize-y focus:border-[#00ff41]/50 focus:outline-none leading-relaxed"
+                                            placeholder={'Olá {{nome}},\n\nSua mensagem aqui...\n\nVocê também pode usar <b>HTML</b>.'}
+                                            spellCheck={false}
                                         />
+
+                                        {/* Live HTML preview */}
+                                        {contact.message && (
+                                            <details className="group">
+                                                <summary className="text-[8px] opacity-40 uppercase cursor-pointer hover:opacity-70 transition-opacity select-none">
+                                                    ▶ Preview (com {{nome}} = "{contact.name || 'Contato'}")
+                                                </summary>
+                                                <div
+                                                    className="mt-2 p-3 border border-[#00ff41]/10 bg-black/30 text-xs leading-relaxed prose-invert max-h-32 overflow-y-auto"
+                                                    dangerouslySetInnerHTML={{
+                                                        __html: contact.message
+                                                            .replace(/\{\{nome\}\}/g, `<strong>${contact.name || 'Contato'}</strong>`)
+                                                            .replace(/\{\{data\}\}/g, new Date().toLocaleDateString('pt-BR'))
+                                                            .replace(/\{\{hora\}\}/g, new Date().toLocaleTimeString('pt-BR'))
+                                                    }}
+                                                />
+                                            </details>
+                                        )}
                                     </div>
 
                                     <div className="lg:col-span-2 flex lg:flex-col justify-end lg:justify-center gap-4">

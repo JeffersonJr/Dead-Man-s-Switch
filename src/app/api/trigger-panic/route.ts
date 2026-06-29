@@ -56,20 +56,28 @@ export async function POST(request: Request) {
 
         let processedCount = 0
 
+        // Helper: replace dynamic tags in message
+        const date_br = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+        const time_br = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+        const resolveTags = (msg: string, targetName: string) => msg
+            .replace(/\{\{nome\}\}/g, targetName)
+            .replace(/\{\{data\}\}/g, date_br)
+            .replace(/\{\{hora\}\}/g, time_br)
+
         if (targets && targets.length > 0) {
             for (const target of targets) {
                 console.log(`\nProcessando contato: ${target.target_name} (${target.type})`)
                 if (target.type === 'email') {
                     console.log(`Tentando disparar E-mail para: ${target.destination_value}...`)
-                    // Send Email via Resend
-                    const customMsg = (target.message || '').replace(/\n/g, '<br>')
+                    // Send Email via Resend — message is HTML, tags resolved
+                    const rawMsg = resolveTags(target.message || '', target.target_name || 'Contato')
                     const htmlTemplate = `
                     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eaeaea; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                         <div style="background-color: #d32f2f; padding: 20px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 24px;">🚨 MENSAGEM DE EMERGÊNCIA</h1>
                         </div>
                         <div style="padding: 30px; background-color: #ffffff; color: #333333; line-height: 1.8; font-size: 16px;">
-                            <p>${customMsg}</p>
+                            ${rawMsg}
                             ${locationHtml}
                         </div>
                     </div>
@@ -96,7 +104,7 @@ export async function POST(request: Request) {
                             continue
                         }
 
-                        const telegramMessage = `${target.message || ''}${locationText}`
+                        const telegramMessage = `${resolveTags(target.message || '', target.target_name || 'Contato')}${locationText}`
 
                         const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                             method: 'POST',
