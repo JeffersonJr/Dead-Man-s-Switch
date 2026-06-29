@@ -159,7 +159,7 @@ export default function SettingsPage() {
             .from('notification_targets')
             .insert({
                 user_id: user.id,
-                type: 'whatsapp',
+                type: 'telegram',
                 target_name: 'NEW CONTACT',
                 destination_value: '',
                 message: 'SYSTEM WARNING: Only 10 minutes remaining. Reset requested immediately.'
@@ -549,11 +549,11 @@ export default function SettingsPage() {
                                         <div className="space-y-1">
                                             <label className="text-[8px] opacity-40 uppercase">Connection Type</label>
                                             <select
-                                                value={target.type || 'whatsapp'}
+                                                value={target.type || 'telegram'}
                                                 onChange={(e) => handleUpdateTarget(target.id, 'type', e.target.value)}
                                                 className="w-full bg-black border-b border-[#00ff41]/30 p-2 text-sm focus:border-[#00ff41] focus:outline-none appearance-none cursor-pointer"
                                             >
-                                                <option value="whatsapp">WhatsApp</option>
+                                                <option value="telegram">Telegram</option>
                                                 <option value="email">Email</option>
                                             </select>
                                         </div>

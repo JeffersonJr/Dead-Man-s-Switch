@@ -115,42 +115,35 @@ export async function GET(request: Request) {
                         } catch (err) {
                             console.error(`[ERROR] Failed to send email to ${target.destination_value}:`, err)
                         }
-                    } else if (target.type === 'whatsapp') {
+                    } else if (target.type === 'telegram') {
                         try {
-                            const evolutionUrl = process.env.EVOLUTION_API_URL
-                            const evolutionKey = process.env.EVOLUTION_API_KEY
-                            const evolutionInstance = process.env.EVOLUTION_INSTANCE_NAME
-
-                            if (!evolutionUrl || !evolutionKey || !evolutionInstance) {
-                                console.error('[ERROR] Evolution API credentials missing.')
-                                continue // Skip this target but continue with others
+                            const telegramToken = process.env.TELEGRAM_BOT_TOKEN
+                            if (!telegramToken) {
+                                console.error('[ERROR] TELEGRAM_BOT_TOKEN missing.')
+                                continue
                             }
 
-                            // Clean number: keep only digits
-                            const cleanNumber = target.destination_value.replace(/\D/g, '')
-                            
-                            const whatsappMessage = `🚨 *ALERTA CRÍTICO DE SEGURANÇA* 🚨\n\nOlá *${target.target_name || 'Contato'}*,\nVocê está recebendo esta mensagem automática do *Dead Man's Switch* porque o tempo limite de verificação de *${userName}* chegou a zero.\n\n*Mensagem Deixada:*\n"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"\n\nPor favor, tente entrar em contato imediatamente.`
+                            const telegramMessage = `🚨 *ALERTA CRÍTICO DE SEGURANÇA* 🚨\n\nOlá *${target.target_name || 'Contato'}*,\nVocê está recebendo esta mensagem automática do *Dead Man's Switch* porque o tempo limite de verificação de *${userName}* chegou a zero.\n\n*Mensagem Deixada:*\n"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"\n\nPor favor, tente entrar em contato imediatamente.`
 
-                            const response = await fetch(`${evolutionUrl}/message/sendText/${evolutionInstance}`, {
+                            const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                                 method: 'POST',
                                 headers: {
-                                    'Content-Type': 'application/json',
-                                    'apikey': evolutionKey
+                                    'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({
-                                    number: cleanNumber,
-                                    text: whatsappMessage
+                                    chat_id: target.destination_value,
+                                    text: telegramMessage
                                 })
                             })
 
                             if (!response.ok) {
                                 const errorText = await response.text()
-                                throw new Error(`Evolution API error: ${response.status} - ${errorText}`)
+                                throw new Error(`Telegram API error: ${response.status} - ${errorText}`)
                             }
 
-                            console.log(`[ACTION] WhatsApp sent to ${cleanNumber}`)
+                            console.log(`[ACTION] Telegram sent to ${target.destination_value}`)
                         } catch (err) {
-                            console.error(`[ERROR] Failed to send WhatsApp to ${target.destination_value}:`, err)
+                            console.error(`[ERROR] Failed to send Telegram to ${target.destination_value}:`, err)
                         }
                     }
                 }

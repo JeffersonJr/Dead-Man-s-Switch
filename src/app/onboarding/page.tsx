@@ -65,11 +65,11 @@ export default function OnboardingPage() {
                     })
                 }
 
-                // WhatsApp target
+                // Telegram target
                 if (contact.phone) {
                     await supabase.from('notification_targets').insert({
                         user_id: profile.user_id,
-                        type: 'whatsapp',
+                        type: 'telegram',
                         destination_value: contact.phone,
                         target_name: contact.name,
                         message: contact.message
@@ -141,7 +141,7 @@ export default function OnboardingPage() {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] uppercase opacity-50 flex items-center gap-2"><Phone size={10} /> WhatsApp Link (DDD+Number)</label>
+                                    <label className="text-[10px] uppercase opacity-50 flex items-center gap-2"><Phone size={10} /> Telegram Chat ID</label>
                                     <input
                                         type="tel"
                                         placeholder="+55 11 90000 0000"
