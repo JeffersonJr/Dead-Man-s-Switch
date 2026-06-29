@@ -15,10 +15,10 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true)
     const [timeLeft, setTimeLeft] = useState<string>('')
     const [mounted, setMounted] = useState(false)
-    const supabase = createClient()
     const router = useRouter()
 
     const fetchStatus = useCallback(async () => {
+        const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
             router.push('/login')
@@ -46,7 +46,7 @@ export default function DashboardPage() {
             }
         }
         setLoading(false)
-    }, [supabase, router])
+    }, [router])
 
     useEffect(() => {
         setMounted(true)
@@ -89,6 +89,7 @@ export default function DashboardPage() {
             // 10-minute warning (600 seconds)
             if (secondsLeft === 600 && !warnTriggered[0]) {
                 warnTriggered[1](true)
+                const supabase = createClient()
                 supabase.functions.invoke('warn-user', {
                     body: { userId: status.user_id, minutesLeft: 10 }
                 })
@@ -108,6 +109,7 @@ export default function DashboardPage() {
     }, [status])
 
     const handleLogout = async () => {
+        const supabase = createClient()
         await supabase.auth.signOut()
         router.push('/login')
     }

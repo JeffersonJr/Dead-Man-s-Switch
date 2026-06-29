@@ -13,9 +13,8 @@ interface ResetButtonProps {
 export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
     const [loading, setLoading] = useState(false)
     const [sequence, setSequence] = useState('')
-    const supabase = createClient()
-
     const handleReset = async () => {
+        const supabase = createClient()
         if (sequence.trim() !== '4 8 15 16 23 42') {
             alert('INVALID SEQUENCE: ACCESS DENIED')
             return
@@ -65,7 +64,7 @@ export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [sequence, supabase, onReset])
+    }, [sequence, onReset])
 
     return (
         <div className="flex flex-col items-center gap-8">
