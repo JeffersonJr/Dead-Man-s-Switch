@@ -91,13 +91,26 @@ export async function GET(request: Request) {
 
             if (targets && targets.length > 0) {
                 // Helper: replace dynamic tags in message
-                const now_br = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
                 const date_br = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
                 const time_br = new Date().toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo' })
                 const resolveTags = (msg: string, targetName: string) => msg
                     .replace(/\{\{nome\}\}/g, targetName)
                     .replace(/\{\{data\}\}/g, date_br)
                     .replace(/\{\{hora\}\}/g, time_br)
+
+                // Converts free HTML to Telegram-safe HTML (parse_mode=HTML)
+                const htmlToTelegramHtml = (html: string): string => html
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<\/(p|div|h[1-6]|li|tr)>/gi, '\n')
+                    .replace(/<(p|div|h[1-6]|li|tr|ul|ol|table|thead|tbody)[^>]*>/gi, '')
+                    .replace(/<strong([^>]*)>/gi, '<b>').replace(/<\/strong>/gi, '</b>')
+                    .replace(/<em([^>]*)>/gi, '<i>').replace(/<\/em>/gi, '</i>')
+                    .replace(/<del([^>]*)>/gi, '<s>').replace(/<\/del>/gi, '</s>')
+                    .replace(/<strike([^>]*)>/gi, '<s>').replace(/<\/strike>/gi, '</s>')
+                    .replace(/<a\s[^>]*href=["']([^"']+)["'][^>]*>/gi, '<a href="$1">')
+                    .replace(/<(?!\/?(?:b|i|u|s|code|pre|a)(?:\s|>|\/))([a-zA-Z][^>]*)>/gi, '')
+                    .replace(/\n{3,}/g, '\n\n')
+                    .trim()
 
                 for (const target of targets) {
                     console.log(`\nProcessando contato: ${target.target_name} (${target.type})`)
@@ -137,17 +150,17 @@ export async function GET(request: Request) {
                                 continue
                             }
 
-                            const telegramMessage = `${resolveTags(target.message || '', target.target_name || 'Contato')}${locationText}`
+                            const telegramMessage = htmlToTelegramHtml(
+                                `${resolveTags(target.message || '', target.target_name || 'Contato')}${locationText}`
+                            )
 
                             const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     chat_id: target.destination_value,
                                     text: telegramMessage,
-                                    parse_mode: 'Markdown'
+                                    parse_mode: 'HTML'
                                 })
                             })
 
