@@ -6,11 +6,14 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { ShieldCheck, LogIn } from 'lucide-react'
+import { SystemModal } from '@/components/SystemModal'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [loading, setLoading] = useState(false)
+    const [modal, setModal] = useState<{open:boolean,title:string,message:string,type:'error'|'success'|'info'}>({open:false,title:'',message:'',type:'info'})
+    const closeModal = () => setModal(m => ({...m, open:false}))
     const supabase = createClient()
     const router = useRouter()
 
@@ -19,7 +22,7 @@ export default function LoginPage() {
         setLoading(true)
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) {
-            alert(error.message)
+            setModal({open:true, title:'ACESSO NEGADO', message:error.message, type:'error'})
             setLoading(false)
         } else {
             router.push('/dashboard')
@@ -37,13 +40,14 @@ export default function LoginPage() {
                 }
             }
         })
-        if (error) alert(error.message)
-        else alert('Check your email for confirmation!')
+        if (error) setModal({open:true, title:'ERRO NO CADASTRO', message:error.message, type:'error'})
+        else setModal({open:true, title:'VERIFICAÇÃO ENVIADA', message:'Verifique seu email para confirmar o cadastro.', type:'success'})
         setLoading(false)
     }
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-black text-[#00ff41] font-mono crt">
+            <SystemModal open={modal.open} title={modal.title} message={modal.message} type={modal.type} variant="alert" onConfirm={closeModal} />
             {/* Station Logo Watermark */}
             <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none w-[80vw] h-[80vw] max-w-[600px] max-h-[600px]">
                 <img src="/logo.png" alt="Dharma" className="w-full h-full grayscale invert" />

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Users, Save, Trash2, Plus, ArrowLeft, Shield, Key, Smartphone, User } from 'lucide-react'
+import { SystemModal, SystemToast } from '@/components/SystemModal'
 
 interface Contact {
     id: string;
@@ -47,6 +48,28 @@ export default function SettingsPage() {
     // Panic Modal
     const [panicModalOpen, setPanicModalOpen] = useState(false)
     const [panicLoading, setPanicLoading] = useState(false)
+
+    // System Modal (replaces all alert/confirm)
+    type SysModalState = {
+        open: boolean
+        title: string
+        message: string
+        variant: 'alert' | 'confirm'
+        type: 'error' | 'success' | 'warning' | 'info'
+        confirmLabel?: string
+        cancelLabel?: string
+        loading?: boolean
+        onConfirm: () => void
+        onCancel?: () => void
+    }
+    const [sysModal, setSysModal] = useState<SysModalState>({
+        open: false, title: '', message: '', variant: 'alert', type: 'info',
+        onConfirm: () => setSysModal(s => ({ ...s, open: false }))
+    })
+    const showAlert = (title: string, message: string, type: SysModalState['type'] = 'info') =>
+        setSysModal({ open: true, title, message, variant: 'alert', type, onConfirm: () => setSysModal(s => ({ ...s, open: false })) })
+    const showConfirm = (title: string, message: string, onConfirm: () => void, type: SysModalState['type'] = 'warning') =>
+        setSysModal({ open: true, title, message, variant: 'confirm', type, confirmLabel: 'SIM', cancelLabel: 'NÃO', onConfirm, onCancel: () => setSysModal(s => ({ ...s, open: false })) })
 
     const supabase = createClient()
     const router = useRouter()
@@ -143,6 +166,7 @@ export default function SettingsPage() {
 
     const handleTriggerPanic = async () => {
         setPanicLoading(true)
+        setSysModal(s => ({ ...s, loading: true }))
         try {
             const { data: { user } } = await supabase.auth.getUser()
             const res = await fetch('/api/trigger-panic', {
@@ -151,10 +175,12 @@ export default function SettingsPage() {
                 body: JSON.stringify({ user_id: user?.id })
             })
             if (!res.ok) throw new Error(await res.text())
-            alert('PÂNICO DISPARADO! Alertas enviados.')
             setPanicModalOpen(false)
+            setSysModal(s => ({ ...s, open: false, loading: false }))
+            showAlert('⚠ PÂNICO DISPARADO', 'Alertas enviados a todos os contatos configurados.', 'success')
         } catch (err: any) {
-            alert('Erro ao disparar pânico: ' + err.message)
+            setSysModal(s => ({ ...s, loading: false }))
+            showAlert('ERRO AO DISPARAR', err.message, 'error')
         } finally {
             setPanicLoading(false)
         }
@@ -170,7 +196,7 @@ export default function SettingsPage() {
         if (profileData.email !== user.email) {
             const { error: emailError } = await supabase.auth.updateUser({ email: profileData.email })
             if (emailError) {
-                alert('Error updating email: ' + emailError.message)
+                showAlert('ERRO AO ATUALIZAR EMAIL', emailError.message, 'error')
             } else {
                 emailChanged = true;
             }
@@ -181,10 +207,8 @@ export default function SettingsPage() {
             .update({ full_name: profileData.full_name, phone: profileData.phone, realtime_location_link: profileData.realtime_location_link })
             .eq('user_id', user.id)
 
-        if (profileError) alert('Error updating profile: ' + profileError.message)
-        else {
-            alert(emailChanged ? 'Profile updated! Check your email to confirm the address change.' : 'Profile updated!')
-        }
+        if (profileError) showAlert('ERRO AO SALVAR PERFIL', profileError.message, 'error')
+        else showAlert('PERFIL ATUALIZADO', emailChanged ? 'Verifique seu email para confirmar a alteração de endereço.' : 'Dados salvos com sucesso.', 'success')
         setSaving(false)
     }
 
@@ -195,7 +219,7 @@ export default function SettingsPage() {
 
     const handleSaveContact = async (contact: Contact) => {
         if (!contact.name) {
-            alert('Please provide a name for the contact.')
+            showAlert('CAMPO OBRIGATÓRIO', 'Por favor informe um nome para o contato.', 'warning')
             return
         }
 
@@ -246,31 +270,37 @@ export default function SettingsPage() {
             
             // Sync state ID
             setContacts(prev => prev.map(c => c.id === contact.id ? {...contact} : c))
-            alert('Contact saved!')
+            showAlert('CONTATO SALVO', 'Os dados foram gravados com sucesso.', 'success')
         } catch (err: any) {
-            alert('Error saving contact: ' + err.message)
+            showAlert('ERRO AO SALVAR CONTATO', err.message, 'error')
         }
         setSaving(false)
     }
 
 
     const handleDeleteContact = async (contact: Contact) => {
-        if (!confirm('PROTOCOL ECHO: Delete contact data?')) return
-
-        setSaving(true)
-        try {
-            if (contact.emailId) await supabase.from('notification_targets').delete().eq('id', contact.emailId)
-            if (contact.telegramId) await supabase.from('notification_targets').delete().eq('id', contact.telegramId)
-            setContacts(prev => prev.filter(c => c.id !== contact.id))
-        } catch (err: any) {
-            alert('Error deleting contact: ' + err.message)
-        }
-        setSaving(false)
+        showConfirm(
+            'PROTOCOL ECHO',
+            'Excluir permanentemente os dados deste contato?',
+            async () => {
+                setSysModal(s => ({ ...s, open: false }))
+                setSaving(true)
+                try {
+                    if (contact.emailId) await supabase.from('notification_targets').delete().eq('id', contact.emailId)
+                    if (contact.telegramId) await supabase.from('notification_targets').delete().eq('id', contact.telegramId)
+                    setContacts(prev => prev.filter(c => c.id !== contact.id))
+                } catch (err: any) {
+                    showAlert('ERRO AO EXCLUIR', err.message, 'error')
+                }
+                setSaving(false)
+            },
+            'error'
+        )
     }
 
     const handleAddContact = () => {
         if (contacts.length >= 3) {
-            alert('MAXIMUM CONTACTS REACHED (3)')
+            showAlert('LIMITE ATINGIDO', 'Máximo de 3 contatos permitido.', 'warning')
             return
         }
 
@@ -288,7 +318,7 @@ export default function SettingsPage() {
 
     const handleTestEmail = async (email: string, id: string) => {
         if (!email || !email.includes('@')) {
-            alert('Please enter a valid email address first.')
+            showAlert('EMAIL INVÁLIDO', 'Por favor insira um endereço de email válido antes de testar.', 'warning')
             return
         }
         setTestLoading(prev => ({ ...prev, [id]: true }))
@@ -298,24 +328,17 @@ export default function SettingsPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             })
-            
             if (!res.ok) {
                 const text = await res.text()
                 let errorMsg = text
-                try {
-                    const parsed = JSON.parse(text)
-                    errorMsg = parsed.error || text
-                } catch (e) {
-                    // fallback to text if not valid json
-                }
+                try { const parsed = JSON.parse(text); errorMsg = parsed.error || text } catch (e) {}
                 throw new Error(errorMsg)
             }
-            
             const data = await res.json()
             if (data.error) throw new Error(data.error)
-            alert('Test email sent successfully! Please check your inbox.')
+            showAlert('EMAIL DE TESTE ENVIADO', 'Verifique sua caixa de entrada.', 'success')
         } catch (err: any) {
-            alert('Failed to send test email: ' + err.message)
+            showAlert('FALHA NO ENVIO', err.message, 'error')
         } finally {
             setTestLoading(prev => ({ ...prev, [id]: false }))
         }
@@ -324,18 +347,18 @@ export default function SettingsPage() {
     // --- Security Handlers ---
     const handleSavePassword = async () => {
         if (passwordData.new !== passwordData.confirm) {
-            alert("Passwords do not match!")
+            showAlert('SENHAS NÃO CONFEREM', 'As senhas digitadas são diferentes.', 'warning')
             return
         }
         if (passwordData.new.length < 6) {
-            alert("Password too short!")
+            showAlert('SENHA MUITO CURTA', 'A senha deve ter pelo menos 6 caracteres.', 'warning')
             return
         }
         setSavingPassword(true)
         const { error } = await supabase.auth.updateUser({ password: passwordData.new })
-        if (error) alert(error.message)
+        if (error) showAlert('ERRO AO ATUALIZAR SENHA', error.message, 'error')
         else {
-            alert('Password updated successfully!')
+            showAlert('SENHA ATUALIZADA', 'Sua senha foi alterada com sucesso.', 'success')
             setPasswordData({ new: '', confirm: '' })
         }
         setSavingPassword(false)
@@ -359,7 +382,7 @@ export default function SettingsPage() {
             friendlyName: 'Device ' + new Date().getTime()
         })
         if (error) {
-            alert(error.message)
+            showAlert('ERRO AO ATIVAR 2FA', error.message, 'error')
             setMfaState(prev => ({ ...prev, loading: false }))
             return
         }
@@ -387,24 +410,31 @@ export default function SettingsPage() {
         })
 
         if (error) {
-            alert(error.message)
+            showAlert('ERRO NA VERIFICAÇÃO', error.message, 'error')
         } else {
-            alert('2FA Enabled Successfully!')
+            showAlert('2FA ATIVADO', 'Autenticação de dois fatores habilitada com sucesso.', 'success')
             setMfaState(prev => ({ ...prev, isEnrolled: true, qrCode: '' }))
         }
         setMfaState(prev => ({ ...prev, loading: false }))
     }
 
     const handleDisable2FA = async () => {
-        if (!confirm('Are you sure you want to disable 2FA?')) return
-        setMfaState(prev => ({ ...prev, loading: true }))
-        const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaState.factorId })
-        if (error) alert(error.message)
-        else {
-            alert('2FA Disabled')
-            setMfaState(prev => ({ ...prev, isEnrolled: false, factorId: '', qrCode: '', verifyCode: '' }))
-        }
-        setMfaState(prev => ({ ...prev, loading: false }))
+        showConfirm(
+            'DESATIVAR 2FA',
+            'Tem certeza que deseja desativar a autenticação de dois fatores?',
+            async () => {
+                setSysModal(s => ({ ...s, open: false }))
+                setMfaState(prev => ({ ...prev, loading: true }))
+                const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaState.factorId })
+                if (error) showAlert('ERRO', error.message, 'error')
+                else {
+                    showAlert('2FA DESATIVADO', 'Autenticação de dois fatores removida.', 'info')
+                    setMfaState(prev => ({ ...prev, isEnrolled: false, factorId: '', qrCode: '', verifyCode: '' }))
+                }
+                setMfaState(prev => ({ ...prev, loading: false }))
+            },
+            'warning'
+        )
     }
 
     const handleTestTelegram = async () => {
@@ -445,32 +475,42 @@ export default function SettingsPage() {
 
     return (
         <main className="min-h-screen bg-black text-[#00ff41] font-mono p-4 md:p-8 crt">
+            {/* System Modal — replaces all alert/confirm */}
+            <SystemModal
+                open={sysModal.open}
+                title={sysModal.title}
+                message={sysModal.message}
+                variant={sysModal.variant}
+                type={sysModal.type}
+                confirmLabel={sysModal.confirmLabel}
+                cancelLabel={sysModal.cancelLabel}
+                loading={sysModal.loading}
+                onConfirm={sysModal.onConfirm}
+                onCancel={sysModal.onCancel}
+            />
+
+            {/* System Toast */}
+            <SystemToast
+                open={!!toastMessage}
+                title={toastMessage?.title || ''}
+                desc={toastMessage?.desc}
+                type={toastMessage?.type || 'info'}
+                onClose={() => setToastMessage(null)}
+            />
+
             {/* Panic Modal */}
-            {panicModalOpen && (
-                <div className="fixed inset-0 bg-red-950/90 z-[100] flex items-center justify-center p-4">
-                    <div className="bg-black border-2 border-red-500 p-8 max-w-md w-full text-red-500 font-mono shadow-[0_0_50px_rgba(255,0,0,0.5)]">
-                        <h2 className="text-2xl font-black mb-4 uppercase animate-pulse">⚠ AVISO DE PERIGO ⚠</h2>
-                        <p className="mb-8 leading-relaxed">Ao disparar essa mensagem, o sistema enviará um alerta a <strong>TODOS</strong> os contatos configurados imediatamente (simulando a falha do timer e o protocolo ECHO chegando a zero).</p>
-                        <p className="mb-8 font-bold text-center">Deseja prosseguir?</p>
-                        <div className="flex gap-4">
-                            <button 
-                                onClick={handleTriggerPanic} 
-                                disabled={panicLoading}
-                                className="flex-1 bg-red-600 text-white font-bold py-3 hover:bg-red-700 transition-colors disabled:opacity-50"
-                            >
-                                {panicLoading ? 'DISPARANDO...' : 'SIM'}
-                            </button>
-                            <button 
-                                onClick={() => setPanicModalOpen(false)} 
-                                disabled={panicLoading}
-                                className="flex-1 border border-red-600 text-red-500 font-bold py-3 hover:bg-red-950 transition-colors"
-                            >
-                                NÃO
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <SystemModal
+                open={panicModalOpen}
+                title="⚠ AVISO DE PERIGO ⚠"
+                message={`Ao disparar essa mensagem, o sistema enviará um alerta a TODOS os contatos configurados imediatamente (simulando a falha do timer e o Protocolo ECHO chegando a zero).\n\nDeseja prosseguir?`}
+                variant="confirm"
+                type="error"
+                confirmLabel={panicLoading ? 'DISPARANDO...' : 'SIM, DISPARAR'}
+                cancelLabel="NÃO"
+                loading={panicLoading}
+                onConfirm={handleTriggerPanic}
+                onCancel={() => setPanicModalOpen(false)}
+            />
 
             <button
                 onClick={() => router.push('/dashboard')}

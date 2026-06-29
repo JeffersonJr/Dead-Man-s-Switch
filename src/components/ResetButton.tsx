@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { RefreshCw, AlertTriangle } from 'lucide-react'
 import { playSound } from '@/lib/sounds'
+import { SystemModal } from '@/components/SystemModal'
 
 interface ResetButtonProps {
     onReset: () => void
@@ -13,10 +14,12 @@ interface ResetButtonProps {
 export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
     const [loading, setLoading] = useState(false)
     const [sequence, setSequence] = useState('')
+    const [modal, setModal] = useState<{open:boolean,title:string,message:string,type:'error'|'warning'|'success'|'info'}>({open:false,title:'',message:'',type:'error'})
+    const closeModal = () => setModal(m => ({...m, open:false}))
     const handleReset = async () => {
         const supabase = createClient()
         if (sequence.trim() !== '4 8 15 16 23 42') {
-            alert('INVALID SEQUENCE: ACCESS DENIED')
+            setModal({open:true, title:'ACESSO NEGADO', message:'SEQUÊNCIA INVÁLIDA. Tente novamente.', type:'error'})
             return
         }
 
@@ -49,7 +52,7 @@ export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
             onReset()
         } catch (error: any) {
             console.error('Reset failed:', error)
-            alert(`CRITICAL SYSTEM ERROR: RESET FAILED - ${error?.message || JSON.stringify(error)}`)
+            setModal({open:true, title:'SYSTEM ERROR', message:`RESET FAILED: ${error?.message || JSON.stringify(error)}`, type:'error'})
         } finally {
             setLoading(false)
         }
@@ -68,6 +71,7 @@ export default function ResetButton({ onReset, isCritical }: ResetButtonProps) {
 
     return (
         <div className="flex flex-col items-center gap-8">
+            <SystemModal open={modal.open} title={modal.title} message={modal.message} type={modal.type} variant="alert" onConfirm={closeModal} />
             <div className="w-full max-w-xs">
                 <label className={`block text-[10px] uppercase tracking-[0.3em] mb-2 opacity-70 text-center ${isCritical ? 'text-red-700' : ''}`}>Enter Execute Sequence</label>
                 <input
