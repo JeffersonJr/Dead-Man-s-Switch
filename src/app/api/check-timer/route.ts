@@ -42,7 +42,8 @@ export async function GET(request: Request) {
                 warning_10m_sent,
                 profiles (
                     full_name,
-                    email
+                    email,
+                    realtime_location_link
                 )
             `)
             .lte('deadline_at', tenMinsFromNow.toISOString())
@@ -58,7 +59,12 @@ export async function GET(request: Request) {
         let processedCount = 0
 
         for (const counter of activeCounters) {
-            const userName = (counter.profiles as any)?.full_name || (counter.profiles as any)?.email || 'Um usuário'
+            const profile = counter.profiles as any
+            const userName = profile?.full_name || profile?.email || 'Um usuário'
+            const locationLink = profile?.realtime_location_link
+            
+            const locationText = locationLink ? `\n\n📍 Rastreamento em tempo real: ${locationLink}` : ''
+            const locationHtml = locationLink ? `<br><br>📍 <strong>Rastreamento em tempo real:</strong> <a href="${locationLink}" style="color: #d32f2f;">${locationLink}</a>` : ''
             
             const deadline = new Date(counter.deadline_at)
             const timeDiffMs = deadline.getTime() - now.getTime()
@@ -95,6 +101,7 @@ export async function GET(request: Request) {
                                 </div>
 
                                 <p style="font-size: 16px;">Por favor, tente entrar em contato com esta pessoa imediatamente.</p>
+                                ${locationHtml}
                                 
                                 <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
                                 <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">
@@ -123,7 +130,7 @@ export async function GET(request: Request) {
                                 continue
                             }
 
-                            const telegramMessage = `🚨 *ALERTA CRÍTICO DE SEGURANÇA* 🚨\n\nOlá *${target.target_name || 'Contato'}*,\nVocê está recebendo esta mensagem automática do *Dead Man's Switch* porque o tempo limite de verificação de *${userName}* chegou a zero.\n\n*Mensagem Deixada:*\n"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"\n\nPor favor, tente entrar em contato imediatamente.`
+                            const telegramMessage = `🚨 *ALERTA CRÍTICO DE SEGURANÇA* 🚨\n\nOlá *${target.target_name || 'Contato'}*,\nVocê está recebendo esta mensagem automática do *Dead Man's Switch* porque o tempo limite de verificação de *${userName}* chegou a zero.\n\n*Mensagem Deixada:*\n"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"\n\nPor favor, tente entrar em contato imediatamente.${locationText}`
 
                             const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                                 method: 'POST',

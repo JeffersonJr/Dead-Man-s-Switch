@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
         const resend = new Resend(process.env.RESEND_API_KEY)
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
         if (!supabaseUrl || !supabaseKey) {
             throw new Error('Supabase environment variables not set.')
@@ -23,14 +23,18 @@ export async function POST(request: Request) {
 
         const supabase = createClient(supabaseUrl, supabaseKey)
 
-        // Fetch User Profile to get Name
+        // Fetch User Profile to get Name and Location
         const { data: profile } = await supabase
             .from('profiles')
-            .select('full_name, email')
+            .select('full_name, email, realtime_location_link')
             .eq('user_id', user_id)
             .single()
 
         const userName = profile?.full_name || profile?.email || 'Usuário Desconhecido'
+        const locationLink = profile?.realtime_location_link
+        
+        const locationText = locationLink ? `\n\n📍 Rastreamento em tempo real: ${locationLink}` : ''
+        const locationHtml = locationLink ? `<br><br>📍 <strong>Rastreamento em tempo real:</strong> <a href="${locationLink}" style="color: #d32f2f;">${locationLink}</a>` : ''
 
         // Fetch user's notification targets
         const { data: targets, error: targetError } = await supabase
@@ -63,6 +67,7 @@ export async function POST(request: Request) {
                             </div>
 
                             <p style="font-size: 16px;">Por favor, tente entrar em contato com esta pessoa imediatamente.</p>
+                            ${locationHtml}
                             
                             <hr style="border: 0; border-top: 1px solid #eaeaea; margin: 30px 0;" />
                             <p style="font-size: 12px; color: #999999; text-align: center; margin: 0;">
@@ -92,7 +97,7 @@ export async function POST(request: Request) {
                             continue
                         }
 
-                        const telegramMessage = `🚨 *ALERTA CRÍTICO DE SEGURANÇA (PÂNICO)* 🚨\n\nOlá *${target.target_name || 'Contato'}*,\nVocê está recebendo esta mensagem automática do *Dead Man's Switch* porque o gatilho manual de PÂNICO de *${userName}* foi ativado.\n\n*Mensagem Deixada:*\n"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"\n\nPor favor, tente entrar em contato imediatamente.`
+                        const telegramMessage = `🚨 *ALERTA CRÍTICO DE SEGURANÇA (PÂNICO)* 🚨\n\nOlá *${target.target_name || 'Contato'}*,\nVocê está recebendo esta mensagem automática do *Dead Man's Switch* porque o gatilho manual de PÂNICO de *${userName}* foi ativado.\n\n*Mensagem Deixada:*\n"${target.message || 'O usuário não deixou uma mensagem personalizada.'}"\n\nPor favor, tente entrar em contato imediatamente.${locationText}`
 
                         const response = await fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
                             method: 'POST',

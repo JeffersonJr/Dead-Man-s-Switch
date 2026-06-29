@@ -27,7 +27,7 @@ export default function SettingsPage() {
     // Data states
     const [contacts, setContacts] = useState<Contact[]>([])
     const [profile, setProfile] = useState<any>(null)
-    const [profileData, setProfileData] = useState({ full_name: '', email: '', phone: '' })
+    const [profileData, setProfileData] = useState({ full_name: '', email: '', phone: '', realtime_location_link: '' })
     const [testLoading, setTestLoading] = useState<{[key: string]: boolean}>({})
     const [toastMessage, setToastMessage] = useState<{title: string, desc: string, type: 'error'|'success'} | null>(null)
     const [telegramTestLoading, setTelegramTestLoading] = useState(false)
@@ -70,7 +70,8 @@ export default function SettingsPage() {
             setProfileData({
                 full_name: profileObj?.full_name || '',
                 email: user.email || '',
-                phone: profileObj?.phone || ''
+                phone: profileObj?.phone || '',
+                realtime_location_link: profileObj?.realtime_location_link || ''
             })
 
             // Targets -> Contacts
@@ -177,7 +178,7 @@ export default function SettingsPage() {
 
         const { error: profileError } = await supabase
             .from('profiles')
-            .update({ full_name: profileData.full_name, phone: profileData.phone })
+            .update({ full_name: profileData.full_name, phone: profileData.phone, realtime_location_link: profileData.realtime_location_link })
             .eq('user_id', user.id)
 
         if (profileError) alert('Error updating profile: ' + profileError.message)
@@ -509,6 +510,17 @@ export default function SettingsPage() {
                                     onChange={e => setProfileData(p => ({...p, phone: e.target.value}))}
                                     className="w-full p-3 border border-[#00ff41]/20 bg-black text-[#00ff41] focus:border-[#00ff41] focus:outline-none transition-colors"
                                 />
+                            </div>
+                            <div>
+                                <label className="text-[10px] opacity-40 block uppercase mb-1">Link de Rastreamento (Google Maps)</label>
+                                <input 
+                                    type="text"
+                                    value={profileData.realtime_location_link}
+                                    onChange={e => setProfileData(p => ({...p, realtime_location_link: e.target.value}))}
+                                    placeholder="Cole aqui o link de compartilhamento contínuo"
+                                    className="w-full p-3 border border-[#00ff41]/20 bg-black text-[#00ff41] focus:border-[#00ff41] focus:outline-none transition-colors"
+                                />
+                                <p className="text-[8px] opacity-50 mt-1">Cole aqui o link de compartilhamento contínuo gerado no seu celular</p>
                             </div>
                             <div>
                                 <label className="text-[10px] opacity-40 block uppercase mb-1">Registry Date</label>

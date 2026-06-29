@@ -20,6 +20,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`antialiased crt`}
       >
+        <div className="vignette"></div>
         {children}
         <Analytics />
         <div className="fixed bottom-4 right-4 text-2xl text-[#00ff41] glow-text font-mono z-50">
